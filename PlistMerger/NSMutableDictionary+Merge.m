@@ -20,11 +20,10 @@
                 NSObject *originValue = self[key];
                 NSObject *newValue = data[key];
                 if ([originValue isKindOfClass:[NSArray class]] && [newValue isKindOfClass:[NSArray class]]) {
-//                    originValue = [NSMutableArray arrayWithArray:(NSArray *)originValue];
-//                    [(NSMutableArray *)originValue addObjectsFromArray:(NSArray *)newValue];
                     [self setObject:newValue forKey:key];
                 } else if ([originValue isKindOfClass:[NSDictionary class]] && [newValue isKindOfClass:[NSDictionary class]]) {
                     originValue = [NSMutableDictionary dictionaryWithDictionary:(NSDictionary *)originValue];
+                    self[key] = originValue;
                     [(NSMutableDictionary *)originValue mergeWithData:newValue];
                 } else {
                     [self setObject:newValue forKey:key];

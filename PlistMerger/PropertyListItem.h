@@ -33,9 +33,11 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)mergeWithData:(id)data;
 
-@property (nonatomic, assign) BOOL isNew;
+@property (nonatomic, assign) BOOL isDifferent;
 
-@property (nonatomic, weak) id originValue;
+@end
+
+@interface DeletedItem : PropertyListItem
 
 @end
 

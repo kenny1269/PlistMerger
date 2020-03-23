@@ -98,11 +98,10 @@
         NSInteger bytes = [NSPropertyListSerialization writePropertyList:self.mergedItem.value toStream:stream format:self.plistFormat options:0 error:&e];
         if (e) {
             NSLog(@"change plist error: %@", e);
+            [self showMessageWithSheet:e.description];
         } else {
             NSLog(@"change plist succeeded:%ld", (long)bytes);
-            NSAlert *alert= [[NSAlert alloc] init];
-            alert.messageText = @"修改成功";
-            [alert beginSheetModalForWindow:self.view.window completionHandler:nil];
+            [self showMessageWithSheet:@"修改成功"];
         }
     }
 }
@@ -116,12 +115,11 @@
         NSInteger bytes = [NSPropertyListSerialization writePropertyList:self.rootItem.value toStream:stream format:self.plistFormat options:0 error:&e];
         if (e) {
             NSLog(@"restore plist error: %@", e);
+            [self showMessageWithSheet:e.description];
         } else {
             [self undo:nil];
             NSLog(@"restore plist succeeded:%ld", (long)bytes);
-            NSAlert *alert= [[NSAlert alloc] init];
-            alert.messageText = @"还原成功";
-            [alert beginSheetModalForWindow:self.view.window completionHandler:nil];
+            [self showMessageWithSheet:@"还原成功"];
         }
     }
 }
@@ -133,11 +131,6 @@
         return [self outlineViewDataModel] ? 1 : 0;
     } else {
         if ([item isKindOfClass:[PropertyListItem class]]) {
-            if ([item isKindOfClass:[MergedItem class]]) {
-                if ([[(MergedItem *)item originValue] isKindOfClass:[NSArray class]] && [[(MergedItem *)item value] isKindOfClass:[NSArray class]]) {
-                    return [[(MergedItem *)item originValue] count] + [[(PropertyListItem *)item children] count];
-                }
-            }
             return [[(PropertyListItem *)item children] count];
         } else {
             return 0;
@@ -153,15 +146,6 @@
     if (item == nil) {
         return [self outlineViewDataModel];
     } else if ([item isKindOfClass:[PropertyListItem class]]) {
-        if ([item isKindOfClass:[MergedItem class]]) {
-            if ([[(MergedItem *)item originValue] isKindOfClass:[NSArray class]] && [[(MergedItem *)item value] isKindOfClass:[NSArray class]]) {
-                if (index < [[(MergedItem *)item originValue] count]) {
-                    return [[(MergedItem *)item originValue] objectAtIndex:index];
-                } else {
-                    return [[(MergedItem *)item children] objectAtIndex:index - [[(MergedItem *)item originValue] count]];
-                }
-            }
-        }
         return [[(PropertyListItem *)item children] objectAtIndex:index];
     } else {
         return nil;
@@ -196,9 +180,10 @@
     NSTableCellView *result = [outlineView makeViewWithIdentifier:tableColumn.identifier owner:self];
     if ([item isKindOfClass:[MergedItem class]] && [(MergedItem *)item isDifferent]) {
         result.textField.textColor = [NSColor blueColor];
+    } else if ([item isKindOfClass:[DeletedItem class]]) {
+        result.textField.textColor = [NSColor redColor];
     } else {
         result.textField.textColor = [NSColor blackColor];
-        
     }
     if ([tableColumn.identifier isEqualToString:@"Value"]) {
         if ([(PropertyListItem *)item expandable]) {
@@ -253,6 +238,14 @@
     } else {
         return self.rootItem;
     }
+}
+
+#pragma mark -
+
+- (void)showMessageWithSheet:(NSString *)message {
+    NSAlert *alert= [[NSAlert alloc] init];
+    alert.messageText = message;
+    [alert beginSheetModalForWindow:self.view.window completionHandler:nil];
 }
 
 @end

@@ -111,70 +111,88 @@ static NSArray *typeNames() {
     }
 }
 
-- (void)checkDifferenceWithOriginItem:(PropertyListItem *)originItem {
+- (BOOL)checkDifferenceWithOriginItem:(PropertyListItem *)originItem {
     if ([self.value isKindOfClass:[NSArray class]] && [originItem.value isKindOfClass:[NSArray class]]) {
-        NSIndexSet *indexSet = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, originItem.children.count)];
-        [self.children insertObjects:originItem.children atIndexes:indexSet];
-//        self.originValue = originItem.children;
-//        for (NSUInteger i = 0; i < self.children.count; i++) {
-//            MergedItem *mergedChildItem = self.children[i];
-//            if (i >= originItem.children.count) {
-//                mergedChildItem.isDifferent = YES;
-//            } else {
-//                PropertyListItem *originChildItem = [originItem.children objectAtIndex:i];
-//                [mergedChildItem checkDifferenceWithOriginItem:originChildItem];
-//            }
-//        }
+        if (![(NSArray *)self.value isEqualToArray:originItem.value]) {
+            for (MergedItem *item in self.children) {
+                item.isDifferent = YES;
+            }
+            for (PropertyListItem *item in originItem.children) {
+                DeletedItem *deletedItem = [[DeletedItem alloc] initWithKey:item.key value:item.value];
+                [self.children insertObject:deletedItem atIndex:[originItem.children indexOfObject:item]];
+            }
+        }
+        
     } else if ([self.value isKindOfClass:[NSDictionary class]] && [originItem.value isKindOfClass:[NSDictionary class]]) {
+        NSMapTable *differenceMap = [NSMapTable weakToWeakObjectsMapTable];
         for (NSUInteger i = 0; i < self.children.count; i++) {
             NSString *key = self.childrenDict.allKeys[i];
             MergedItem *mergedChildItem = self.childrenDict[key];
             if (![originItem.childrenDict.allKeys containsObject:key]) {
-                mergedChildItem.isNew = YES;
-                
+                mergedChildItem.isDifferent = YES;
                 continue;
             } else {
                 PropertyListItem *originChildItem = originItem.childrenDict[key];
-                [mergedChildItem checkDifferenceWithOriginItem:originChildItem];
+                BOOL isDifferent = [mergedChildItem checkDifferenceWithOriginItem:originChildItem];
+                if (isDifferent) {
+                    [differenceMap setObject:originChildItem forKey:mergedChildItem];
+                }
             }
+        }
+        NSEnumerator *keyEnumerator = differenceMap.keyEnumerator;
+        id next;
+        while (next = [keyEnumerator nextObject]) {
+            PropertyListItem *originChildItem = [differenceMap objectForKey:next];
+            [self.children insertObject:[[DeletedItem alloc] initWithKey:originChildItem.key value:originChildItem.value] atIndex:[self.children indexOfObject:next]];
         }
     } else if ([self.value isKindOfClass:[NSString class]] && [originItem.value isKindOfClass:[NSString class]]) {
         if (![(NSString *)self.value isEqualToString:originItem.value]) {
-            self.originValue = originItem.value;
+            self.isDifferent = YES;
+            return YES;
         }
     } else if ([self.value isKindOfClass:[NSData class]] && [originItem.value isKindOfClass:[NSData class]]) {
         if (![(NSData *)self.value isEqualToData:originItem.value]) {
-            self.originValue = originItem.value;
+            self.isDifferent = YES;
+            return YES;
         }
     } else if ([self.value isKindOfClass:[NSDate class]] && [originItem.value isKindOfClass:[NSDate class]]) {
         if (![(NSDate *)self.value isEqualToDate:originItem.value]) {
-            self.originValue = originItem.value;
+            self.isDifferent = YES;
+            return YES;
         }
     } else if ([self.value isKindOfClass:[NSNumber class]] && [originItem.value isKindOfClass:[NSNumber class]]) {
         if (![(NSNumber *)self.value isEqualToNumber:originItem.value]) {
-            self.originValue = originItem.value;
+            self.isDifferent = YES;
+            return YES;
         }
     } else if ([self.value isKindOfClass:[NSNumber class]]) {
         if (![(NSNumber *)self.value isEqualToNumber:originItem.value]) {
-            self.originValue = originItem.value;
+            self.isDifferent = YES;
+            return YES;
         }
     } else {
         if (![self.value isEqual:originItem.value]) {
-            self.originValue = originItem.value;
+            self.isDifferent = YES;
+            return YES;
         }
     }
+    return NO;
 }
 
-//- (NSMutableArray *)children {
-//    if (!_children) {
-//        _children = [super children];
-//        if (self.isDifferent) {
-//            for (MergedItem *item in _children) {
-//                item.isDifferent = YES;
-//            }
-//        }
-//    }
-//    return _children;
-//}
+- (NSMutableArray *)children {
+    if (!_children) {
+        _children = [super children];
+        if (self.isDifferent) {
+            for (MergedItem *item in _children) {
+                item.isDifferent = YES;
+            }
+        }
+    }
+    return _children;
+}
+
+@end
+
+@implementation DeletedItem
 
 @end
